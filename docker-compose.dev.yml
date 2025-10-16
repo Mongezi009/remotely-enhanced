@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  remotely-server:
+    build:
+      context: .
+      dockerfile: Server/Dockerfile.dev
+    container_name: remotely-enhanced-server-dev
+    restart: unless-stopped
+    ports:
+      - "5000:5000"   # HTTP
+      - "5001:5001"   # HTTPS
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:5001;http://+:5000
+      - ConnectionStrings__SQLite=Data Source=/app/AppData/Remotely.db
+      - ApplicationOptions__DBProvider=SQLite
+      - ApplicationOptions__MaxOrganizationCount=-1
+      - ApplicationOptions__EnableWindowsEventLog=false
+      - ApplicationOptions__EnforceAttendedAccess=false
+      - ApplicationOptions__RemoteControlNotifyUsers=true
+      - ApplicationOptions__RemoteControlRequiresAuthentication=false
+      - ApplicationOptions__EnableRemoteControlRecording=false
+      - ApplicationOptions__DataRetentionInDays=7
+      - ApplicationOptions__AllowApiLogin=true
+      - ApplicationOptions__Theme=Dark
+      - ApplicationOptions__UseHsts=false
+      - ApplicationOptions__RedirectToHttps=false
+      - ApplicationOptions__UseHttpLogging=true
+      - EnhancedFeatures__EnableComprehensiveScanning=true
+      - EnhancedFeatures__ScanIntervalMinutes=30
+      - EnhancedFeatures__QuickUpdateIntervalMinutes=2
+      - EnhancedFeatures__EnableSecurityScanning=true
+      - EnhancedFeatures__EnablePerformanceMonitoring=true
+      - EnhancedFeatures__MaxConcurrentRemoteSessions=5
+      - EnhancedFeatures__EnableAudioStreaming=true
+      - EnhancedFeatures__DefaultStreamQuality=Medium
+      - EnhancedFeatures__EnableFileStreaming=true
+      - EnhancedFeatures__MaxFileStreamSizeMB=512
+    volumes:
+      - remotely-data:/app/AppData
+      - ./logs:/app/logs
+    networks:
+      - remotely-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  remotely-data:
+    driver: local
+
+networks:
+  remotely-network:
+    driver: bridge

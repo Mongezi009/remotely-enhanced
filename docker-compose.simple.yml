@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  remotely-server:
+    build:
+      context: .
+      dockerfile: docker-compose/Dockerfile
+    container_name: remotely-enhanced-server
+    restart: unless-stopped
+    ports:
+      - "5000:5000"   # HTTP
+      - "5001:5001"   # HTTPS
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=https://+:5001;http://+:5000
+      - ApplicationOptions__DBProvider=SQLite
+      - ApplicationOptions__MaxOrganizationCount=-1
+      - ApplicationOptions__EnableWindowsEventLog=false
+      - ApplicationOptions__EnforceAttendedAccess=false
+      - ApplicationOptions__RemoteControlNotifyUsers=true
+      - ApplicationOptions__RemoteControlRequiresAuthentication=false
+      - ApplicationOptions__EnableRemoteControlRecording=false
+      - ApplicationOptions__DataRetentionInDays=30
+      - ApplicationOptions__AllowApiLogin=true
+      - ApplicationOptions__Theme=Dark
+      - ApplicationOptions__UseHsts=false
+      - ApplicationOptions__RedirectToHttps=false
+    volumes:
+      - remotely-data:/app/AppData
+    networks:
+      - remotely-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/HealthCheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  remotely-data:
+    driver: local
+
+networks:
+  remotely-network:
+    driver: bridge
