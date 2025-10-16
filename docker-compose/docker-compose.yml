@@ -1,0 +1,61 @@
+version: '3.4'
+
+networks:
+  remotely:
+    name: remotely-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+
+services:
+  remotely-enhanced:
+    build:
+      context: ..
+      dockerfile: Server/Dockerfile
+    container_name: remotely-enhanced
+    volumes:
+      - remotely-data:/app/AppData
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    networks:
+      - remotely
+    environment:
+      # ASPNETCORE environment variables should *not* be changed.
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=https://+:5001;http://+:5000
+
+      # Other ASP.NET Core configurations can be overridden here, such as Logging.
+      # See https://learn.microsoft.com/en-us/aspnet/core/fundamentals/configuration/?view=aspnetcore-8.0
+      - Serilog__MinimumLevel__Override__Microsoft.AspNetCore=Warning
+      - Serilog__MinimumLevel__Override__System=Warning
+
+      # Values for DbProvider are SQLite, SQLServer, and PostgreSQL.
+      - Remotely_ApplicationOptions__DbProvider=SQLite
+      # The Docker gateway will be used in Forwarded Headers, which is necessary to
+      # to correctly determine request hostname and scheme within the app.  If you change
+      # the network config, you must update this value as well.
+      - Remotely_ApplicationOptions__DockerGateway=172.28.0.1
+      # Allow multi-tenancy and API login for enhanced features
+      - Remotely_ApplicationOptions__MaxOrganizationCount=-1
+      - Remotely_ApplicationOptions__AllowApiLogin=true
+      - Remotely_ApplicationOptions__Theme=Dark
+      # This path shouldn't be changed.  It points to the Docker volume.
+      - Remotely_ConnectionStrings__SQLite=Data Source=/app/AppData/Remotely.db
+      # Enhanced features configuration
+      - Remotely_EnhancedFeatures__EnableComprehensiveScanning=true
+      - Remotely_EnhancedFeatures__ScanIntervalMinutes=60
+      - Remotely_EnhancedFeatures__QuickUpdateIntervalMinutes=5
+      - Remotely_EnhancedFeatures__EnableSecurityScanning=true
+      - Remotely_EnhancedFeatures__EnablePerformanceMonitoring=true
+      # If using SQL Server, change the connection string to point to your SQL Server instance.
+      - Remotely_ConnectionStrings__SQLServer=Server=(localdb)\\mssqllocaldb;Database=Remotely-Server-53bc9b9d-9d6a-45d4-8429-2a2761773502;Trusted_Connection=True;MultipleActiveResultSets=true
+      # If using PostgreSQL, change the connection string to point to your PostgreSQL instance.
+      - Remotely_ConnectionStrings__PostgreSQL=Host=localhost;Database=Remotely;Username=postgres;Password=changeme;
+
+volumes:
+  remotely-data:
+    driver: local
