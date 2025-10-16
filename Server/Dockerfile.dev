@@ -1,0 +1,49 @@
+# Development Dockerfile with hot reload
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS development
+WORKDIR /src
+
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs
+
+# Install required packages
+RUN apt-get update && apt-get install -y \
+    curl \
+    libc6-dev \
+    libgdiplus \
+    libx11-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy project files
+COPY ["Server/Remotely.Server.csproj", "Server/"]
+COPY ["Shared/Remotely.Shared.csproj", "Shared/"]
+COPY ["Agent/Remotely.Agent.csproj", "Agent/"]
+COPY ["Desktop.Core/Remotely.Desktop.Core.csproj", "Desktop.Core/"]
+COPY ["Desktop.Shared/Remotely.Desktop.Shared.csproj", "Desktop.Shared/"]
+
+# Restore dependencies
+RUN dotnet restore "Server/Remotely.Server.csproj"
+
+# Copy source code
+COPY . .
+
+# Build client in development mode
+WORKDIR /src/Client
+RUN npm install
+RUN npm run build:dev
+
+# Create app data directory
+RUN mkdir -p /app/AppData
+
+# Set working directory back to server
+WORKDIR /src/Server
+
+# Expose ports
+EXPOSE 5000 5001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:5000/health || exit 1
+
+# Use dotnet watch for hot reload
+CMD ["dotnet", "watch", "run", "--urls", "https://+:5001;http://+:5000"]
