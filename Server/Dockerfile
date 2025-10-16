@@ -9,13 +9,13 @@ COPY ["Agent/Agent.csproj", "Agent/"]
 COPY ["Desktop.Core/Desktop.Core.csproj", "Desktop.Core/"]
 COPY ["Desktop.Shared/Desktop.Shared.csproj", "Desktop.Shared/"]
 
-RUN dotnet restore "Server/Server.csproj"
+RUN dotnet restore "Server/Server.csproj" -p:EnableLibraryManagerRestore=false
 
 # Copy source code
 COPY . .
 
-# Build server
-RUN dotnet publish "Server/Server.csproj" -c Release -o /app/publish --no-restore
+# Build server (disable LibraryManager)
+RUN dotnet publish "Server/Server.csproj" -c Release -o /app/publish --no-restore -p:EnableLibraryManagerRestore=false
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime

@@ -38,9 +38,30 @@ if (-not $composeCommand) {
 Write-Host ""
 Write-Host "Building Remotely Enhanced Server..." -ForegroundColor Cyan
 
+# Verify libman.json status
+Write-Host "Checking libman.json status..." -ForegroundColor Cyan
+if (Test-Path "Server\libman.json") {
+    Write-Host "✅ libman.json exists (empty version)" -ForegroundColor Green
+    Get-Content "Server\libman.json" | Write-Host -ForegroundColor Gray
+} else {
+    Write-Host "⚠️  libman.json does not exist" -ForegroundColor Yellow
+}
+Write-Host ""
+
+# Check Server.csproj for LibraryManager references
+Write-Host "Checking Server.csproj for LibraryManager references..." -ForegroundColor Cyan
+$csprojContent = Get-Content "Server\Server.csproj" -Raw
+if ($csprojContent -match "LibraryManager") {
+    Write-Host "⚠️  Found LibraryManager references in Server.csproj" -ForegroundColor Yellow
+} else {
+    Write-Host "✅ No LibraryManager references found" -ForegroundColor Green
+}
+Write-Host ""
+
 # Build the server image
 try {
-    Invoke-Expression "$composeCommand build remotely-server"
+    Write-Host "Starting Docker build..." -ForegroundColor Cyan
+    Invoke-Expression "$composeCommand build remotely-server --no-cache"
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host ""
@@ -55,6 +76,7 @@ try {
     } else {
         Write-Host ""
         Write-Host "❌ Build failed with exit code: $LASTEXITCODE" -ForegroundColor Red
+        Write-Host "Try running with --no-cache flag or check Docker logs" -ForegroundColor Yellow
     }
 } catch {
     Write-Host ""
