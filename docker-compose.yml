@@ -44,8 +44,6 @@ services:
     volumes:
       - remotely-data:/app/AppData
       - ./certs:/https:ro
-    depends_on:
-      - remotely-db
     networks:
       - remotely-network
     healthcheck:
@@ -86,7 +84,8 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
-      - remotely-server
+      remotely-server:
+        condition: service_healthy
     networks:
       - remotely-network
     environment:
