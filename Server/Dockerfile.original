@@ -1,0 +1,35 @@
+# Build stage
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy solution and project files
+COPY ["Remotely.sln", "./"]
+COPY ["Server/Server.csproj", "Server/"]
+COPY ["Shared/Shared.csproj", "Shared/"]
+COPY ["Agent/Agent.csproj", "Agent/"]
+COPY ["Desktop.Core/Desktop.Core.csproj", "Desktop.Core/"]
+COPY ["Desktop.Shared/Desktop.Shared.csproj", "Desktop.Shared/"]
+
+# Restore packages
+RUN dotnet restore "Server/Server.csproj"
+
+# Copy all source code
+COPY . .
+
+# Build and publish
+RUN dotnet publish "Server/Server.csproj" -c Release -o /app/publish --no-restore
+
+# Runtime stage - based on original Remotely approach
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+
+EXPOSE ${ASPNETCORE_HTTP_PORTS}
+
+RUN apt -y update && apt -y install curl
+COPY --from=build /app/publish /app
+
+WORKDIR /app
+
+ENTRYPOINT ["dotnet", "Remotely_Server.dll"]
+
+HEALTHCHECK \
+  CMD curl -f http://localhost:${ASPNETCORE_HTTP_PORTS}/api/healthcheck || exit 1

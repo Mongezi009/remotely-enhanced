@@ -1,0 +1,43 @@
+version: '3.4'
+
+networks:
+  remotely:
+    name: remotely-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+
+services:
+  remotely:
+    build:
+      context: .
+      dockerfile: Server/Dockerfile.original
+    container_name: remotely-enhanced
+    volumes:
+      - remotely-data:/app/AppData
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    networks:
+      - remotely
+    environment:
+      # ASPNETCORE environment variables should *not* be changed.
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=5000
+      
+      # Other ASP.NET Core configurations
+      - Serilog__MinimumLevel__Override__Microsoft.AspNetCore=Warning
+      - Serilog__MinimumLevel__Override__System=Warning
+
+      # Database configuration - using SQLite for simplicity
+      - Remotely_ApplicationOptions__DbProvider=SQLite
+      # The Docker gateway for Forwarded Headers
+      - Remotely_ApplicationOptions__DockerGateway=172.28.0.1
+      # SQLite database path - points to Docker volume
+      - Remotely_ConnectionStrings__SQLite=Data Source=/app/AppData/Remotely.db
+
+volumes:
+  remotely-data:
+    driver: local
